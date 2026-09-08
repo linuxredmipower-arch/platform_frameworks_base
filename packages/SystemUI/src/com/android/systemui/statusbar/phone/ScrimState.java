@@ -81,13 +81,13 @@ public enum ScrimState {
             }
             mFrontTint = mBackgroundColor;
             mBehindTint = mBackgroundColor;
-            mNotifTint = mClipQsScrim ? mBackgroundColor : Color.TRANSPARENT;
+            mNotifTint = mClipQsScrim ? mQSClipScrimTint : Color.TRANSPARENT;
 
             mFrontAlpha = 0;
             mBehindAlpha = mClipQsScrim ? mQSClipScrimAlpha : mScrimBehindAlphaKeyguard;
             mNotifAlpha = mClipQsScrim ? mScrimBehindAlphaKeyguard : 0;
             if (mClipQsScrim) {
-                updateScrimColor(mScrimBehind, mQSClipScrimAlpha /* alpha */, mBackgroundColor);
+                updateScrimColor(mScrimBehind, mQSClipScrimAlpha /* alpha */, mQSClipScrimTint);
             }
         }
     },
@@ -127,7 +127,7 @@ public enum ScrimState {
         @Override
         public void prepare(ScrimState previousState) {
             mBehindAlpha = mClipQsScrim ? mQSClipScrimAlpha : mDefaultScrimAlpha;
-            mBehindTint = mClipQsScrim ? mBackgroundColor : mSurfaceColor;
+            mBehindTint = mClipQsScrim ? mQSClipScrimTint : mSurfaceColor;
             mNotifAlpha = mClipQsScrim ? mQSClipScrimAlpha : 0;
             mNotifTint = Color.TRANSPARENT;
             mFrontAlpha = 0f;
@@ -162,7 +162,7 @@ public enum ScrimState {
             mBehindTint = mClipQsScrim ? Color.TRANSPARENT : mBackgroundColor;
 
             if (mClipQsScrim) {
-                updateScrimColor(mScrimBehind, mQSClipScrimAlpha /* alpha */, mBackgroundColor);
+                updateScrimColor(mScrimBehind, mQSClipScrimAlpha /* alpha */, mQSClipScrimTint);
             }
         }
     },
@@ -241,7 +241,8 @@ public enum ScrimState {
         @Override
         public void prepare(ScrimState previousState) {
             // State that UI will sync to.
-            mBehindAlpha = mClipQsScrim ? mQSClipScrimAlpha : 0;
+            // Miku: always 0 on the unlocked shade (pure blur, no QS overlay).
+            mBehindAlpha = 0;
             mNotifAlpha = 0;
             mFrontAlpha = 0;
             mAnimationDuration = mKeyguardFadingAway
@@ -257,7 +258,7 @@ public enum ScrimState {
                     && !fromAod;
 
             mFrontTint = Color.TRANSPARENT;
-            mBehindTint = mBackgroundColor;
+            mBehindTint = mClipQsScrim ? mQSClipScrimTint : mBackgroundColor;
             mBlankScreen = false;
 
             if (mDisplayRequiresBlanking && previousState == ScrimState.AOD) {
@@ -271,9 +272,10 @@ public enum ScrimState {
                 mBlankScreen = true;
             }
 
-            if (mClipQsScrim) {
-                updateScrimColor(mScrimBehind, mQSClipScrimAlpha /* alpha */, mBackgroundColor);
-            }
+            // Miku: no direct scrim stamping here. applyState() computes the unlocked
+            // shade alpha (0 for pure blur) and setOrAdaptCurrentAnimation() pushes it,
+            // so state re-entries (theme change, brightness mirror) can't resurrect
+            // the QS overlay on the unlocked shade.
         }
     },
 
@@ -282,7 +284,7 @@ public enum ScrimState {
         public void prepare(ScrimState previousState) {
             mFrontTint = Color.TRANSPARENT;
             mBehindTint = mBackgroundColor;
-            mNotifTint = mClipQsScrim ? mBackgroundColor : Color.TRANSPARENT;
+            mNotifTint = mClipQsScrim ? mQSClipScrimTint : Color.TRANSPARENT;
 
             mFrontAlpha = 0;
             mBehindAlpha = mClipQsScrim ? 1 : 0;
@@ -291,7 +293,7 @@ public enum ScrimState {
             mBlankScreen = false;
 
             if (mClipQsScrim) {
-                updateScrimColor(mScrimBehind, 1f /* alpha */, mBackgroundColor);
+                updateScrimColor(mScrimBehind, 1f /* alpha */, mQSClipScrimTint);
             }
         }
     },
@@ -311,7 +313,7 @@ public enum ScrimState {
 
             mFrontTint = Color.TRANSPARENT;
             mBehindTint = mBackgroundColor;
-            mNotifTint = mClipQsScrim ? mBackgroundColor : Color.TRANSPARENT;
+            mNotifTint = mClipQsScrim ? mQSClipScrimTint : Color.TRANSPARENT;
         }
     },
 
@@ -333,7 +335,7 @@ public enum ScrimState {
 
             mFrontTint = Color.TRANSPARENT;
             mBehindTint = mBackgroundColor;
-            mNotifTint = mClipQsScrim ? mBackgroundColor : Color.TRANSPARENT;
+            mNotifTint = mClipQsScrim ? mQSClipScrimTint : Color.TRANSPARENT;
         }
     };
 
@@ -353,6 +355,7 @@ public enum ScrimState {
     float mScrimBehindAlphaKeyguard;
     float mDefaultScrimAlpha;
     float mQSClipScrimAlpha;
+    int mQSClipScrimTint = Color.BLACK;
     ScrimView mScrimInFront;
     ScrimView mScrimBehind;
 
@@ -456,6 +459,19 @@ public enum ScrimState {
 
     public void setQSClipScrimAlpha(float qsClipScrimAlpha) {
         mQSClipScrimAlpha = qsClipScrimAlpha;
+    }
+
+    /**
+     * Miku: Theme-dependent tint of the scrim behind the quick settings.
+     * Updated by {@code ScrimController#updateThemeColors()}, so the QS overlay
+     * follows dark/light mode instead of being a fixed black.
+     */
+    public void setQSClipScrimTint(int qsClipScrimTint) {
+        mQSClipScrimTint = qsClipScrimTint;
+    }
+
+    public int getQSClipScrimTint() {
+        return mQSClipScrimTint;
     }
 
     public void setSurfaceColor(int surfaceColor) {

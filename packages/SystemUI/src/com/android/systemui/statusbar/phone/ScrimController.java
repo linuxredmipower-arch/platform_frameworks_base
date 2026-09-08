@@ -955,10 +955,12 @@ public class ScrimController implements ViewTreeObserver.OnPreDrawListener, Dump
                     mBehindAlpha = 0;
                     mNotificationsAlpha = 0;
                 } else if (mClipsQsScrim) {
-                    float behindFraction = getInterpolatedFraction();
-                    behindFraction = (float) Math.pow(behindFraction, 0.8f);
-                    mBehindAlpha = QS_CLIP_SCRIM_ALPHA;
-                    mNotificationsAlpha = behindFraction * QS_CLIP_SCRIM_ALPHA;
+                    // Miku: the unlocked shade shows pure wallpaper blur without any scrim
+                    // tint (QQS and QS alike). Keep the alpha unconditionally at 0 so that
+                    // no state re-entry (theme change, brightness mirror) can resurrect the
+                    // overlay via a stale mQsExpansion.
+                    mBehindAlpha = 0;
+                    mNotificationsAlpha = 0;
                 } else {
                     mBehindAlpha = mLargeScreenShadeInterpolator.getBehindScrimAlpha(
                             mPanelExpansionFraction * mDefaultScrimAlpha);
@@ -1012,7 +1014,7 @@ public class ScrimController implements ViewTreeObserver.OnPreDrawListener, Dump
                 mNotificationsAlpha = behindAlpha;
                 mNotificationsTint = behindTint;
                 mBehindAlpha = QS_CLIP_SCRIM_ALPHA;
-                mBehindTint = Color.BLACK;
+                mBehindTint = mState.getQSClipScrimTint();
             } else {
                 mBehindAlpha = behindAlpha;
                 if (mState == ScrimState.KEYGUARD && mTransitionToFullShadeProgress > 0.0f) {
@@ -1226,10 +1228,11 @@ public class ScrimController implements ViewTreeObserver.OnPreDrawListener, Dump
     }
 
     private void dispatchBackScrimState(float alpha) {
-        // When clipping QS, the notification scrim is the one that feels behind.
-        // mScrimBehind will be drawing black and its opacity will always be 1.
+        // Miku: when clipping QS, the behind scrim is the actual QS overlay, so report its
+        // alpha instead of the notification scrim's. This keeps the light bar forcing tied to
+        // the QS scrim (0 when QQS shows pure blur, QS_CLIP_SCRIM_ALPHA when QS is expanded).
         if (mClipsQsScrim && mQsBottomVisible) {
-            alpha = mNotificationsAlpha;
+            alpha = mBehindAlpha;
         }
         mScrimStateListener.accept(mState, alpha, mColors);
     }
@@ -1553,6 +1556,8 @@ public class ScrimController implements ViewTreeObserver.OnPreDrawListener, Dump
                 com.android.internal.R.attr.materialColorSurface).getDefaultColor();
         for (ScrimState state : ScrimState.values()) {
             state.setSurfaceColor(surface);
+            // Miku: QS overlay tint follows the theme (surfaceDim) instead of a fixed black.
+            state.setQSClipScrimTint(background);
         }
 
         mNeedsDrawableColorUpdate = true;
@@ -1560,6 +1565,14 @@ public class ScrimController implements ViewTreeObserver.OnPreDrawListener, Dump
 
     private void onThemeChanged() {
         updateThemeColors();
+        if (mClipsQsScrim && mScrimBehind != null && mState != ScrimState.UNINITIALIZED) {
+            // Miku: refresh the theme-dependent QS scrim tint, but keep the current
+            // alpha. Re-running prepare()/applyState() here would resurrect the QS
+            // overlay (mQsExpansion is still 1 while QS is open) and break the
+            // pure-blur shade.
+            updateScrimColor(mScrimBehind, getCurrentScrimAlpha(mScrimBehind),
+                    mState.getQSClipScrimTint());
+        }
         scheduleUpdate();
     }
 
