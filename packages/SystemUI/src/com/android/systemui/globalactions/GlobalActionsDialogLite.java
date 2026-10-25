@@ -2947,11 +2947,25 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
             if (mCurrentDialog == null) {
                 return;
             }
+            // Temporary stopgap: the blur power menu has no open/close panel animation. The
+            // dialog appears with its full background blur immediately, and dismissal hides the
+            // panel immediately but fades the background blur/dim out before removing the window.
+            // This avoids the DialogTransitionAnimator ghost and the transparent/flickering card
+            // until the upstream power-menu blur fix is available.
+            boolean blurEnabled =
+                    mCurrentDialog.getWindow().getAttributes().getBlurBehindRadius() > 0;
+            if (blurEnabled) {
+                WindowManager.LayoutParams attrs = mCurrentDialog.getWindow().getAttributes();
+                if (attrs.windowAnimations != 0) {
+                    attrs.windowAnimations = 0;
+                    mCurrentDialog.getWindow().setAttributes(attrs);
+                }
+            }
             DialogTransitionAnimator.Controller controller =
                     expandable != null ? expandable.dialogTransitionController(
                             new DialogCuj(InteractionJankMonitor.CUJ_SHADE_DIALOG_OPEN,
                                     INTERACTION_JANK_TAG)) : null;
-            if (controller != null) {
+            if (controller != null && !blurEnabled) {
                 if (TransitionAnimator.Companion.dynamicTargetResolutionEnabled()) {
                     mDialogTransitionAnimator.show(mCurrentDialog,
                             expandable::dialogTransitionController, controller.getCuj());
@@ -2969,7 +2983,7 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
             // DialogTransitionAnimator) so we don't run the animation.
             boolean shouldAnimateInWindow =
                     mCurrentDialog.getWindow().getAttributes().windowAnimations == 0;
-            if (shouldAnimateInWindow) {
+            if (shouldAnimateInWindow && !blurEnabled) {
                 startAnimation(mCurrentDialog, true /* isEnter */, null /* then */);
 
                 // Override the dialog dismiss so that we can animate in-window before dismissing
@@ -2985,7 +2999,43 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
                             dismiss();
                         })
                 );
+            } else if (blurEnabled) {
+                mCurrentDialog.setDismissOverride(() -> {
+                    mCurrentDialog.setDismissOverride(null);
+                    fadeBlurAndDismiss();
+                });
             }
+        }
+
+        /** Temporary: hide the panel, fade the window blur/dim, then remove the dialog. */
+        private void fadeBlurAndDismiss() {
+            if (mCurrentDialog == null) {
+                return;
+            }
+            if (mGlobalActionsLayout != null) {
+                mGlobalActionsLayout.setVisibility(View.INVISIBLE);
+            }
+            Window window = mCurrentDialog.getWindow();
+            WindowManager.LayoutParams attrs = window.getAttributes();
+            final int startBlur = attrs.getBlurBehindRadius();
+            final float startDim = attrs.dimAmount;
+            ValueAnimator fade = ValueAnimator.ofFloat(1f, 0f);
+            fade.setDuration(220);
+            fade.setInterpolator(Interpolators.STANDARD_ACCELERATE);
+            fade.addUpdateListener(animator -> {
+                float fraction = (float) animator.getAnimatedValue();
+                attrs.setBlurBehindRadius((int) (startBlur * fraction));
+                window.setAttributes(attrs);
+                window.setDimAmount(startDim * fraction);
+            });
+            fade.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    hide();
+                    dismiss();
+                }
+            });
+            fade.start();
         }
 
         public boolean isShowing() {
