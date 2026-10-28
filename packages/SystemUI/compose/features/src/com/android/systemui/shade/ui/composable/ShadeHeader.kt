@@ -1007,16 +1007,11 @@ fun MikuQsHeaderArt(art: QsHeaderArt, modifier: Modifier = Modifier) {
     val custom = art.customBitmap
     // zIndex keeps the illustration under tiles/buttons in the same Box.
     val imageModifier = modifier.fillMaxWidth().height(200.dp).zIndex(-1f)
-    // ContentScale.Inside centers a width-fitted image vertically and leaves a gap
-    // above it. Keep the art anchored to the top edge instead, so it sits directly
-    // against the screen edge and behind the status bar.
-    val imageAlignment = Alignment.TopCenter
     if (custom != null) {
         Image(
             bitmap = custom.asImageBitmap(),
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            alignment = imageAlignment,
             alpha = art.alpha,
             modifier = imageModifier,
         )
@@ -1025,7 +1020,6 @@ fun MikuQsHeaderArt(art: QsHeaderArt, modifier: Modifier = Modifier) {
             painter = painterResource(id = R.drawable.statusbar_miku),
             contentDescription = null,
             contentScale = ContentScale.Inside,
-            alignment = imageAlignment,
             alpha = art.alpha,
             modifier = imageModifier,
         )
