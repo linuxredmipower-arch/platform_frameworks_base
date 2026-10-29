@@ -404,10 +404,20 @@ private fun ContentScope.QuickSettingsContent(
                 Modifier.fillMaxSize().overscroll(verticalOverscrollEffect).padding(navBarInsets),
         ) {
             Box(modifier = Modifier.fillMaxSize().weight(1f)) {
-                MikuQsHeaderArt(
-                    viewModel = headerViewModel,
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
+                // QuickSettingsScene is alwaysCompose so it can keep its state while another
+                // scene is active. The header art is not part of the scene's element tree (it
+                // sits behind the tiles with zIndex -1), so do not let it outlive the QS scene:
+                // otherwise it stays on screen after QS -> QQS -> home.
+                val isQsSceneVisible =
+                    layoutState.isIdle(Scenes.QuickSettings) ||
+                        layoutState.isTransitioning(to = Scenes.QuickSettings) ||
+                        layoutState.isTransitioning(from = Scenes.QuickSettings)
+                if (isQsSceneVisible) {
+                    MikuQsHeaderArt(
+                        viewModel = headerViewModel,
+                        modifier = Modifier.align(Alignment.TopCenter),
+                    )
+                }
                 Column(
                     modifier =
                         Modifier.disableSwipesWhenScrolling()
