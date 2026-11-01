@@ -40,19 +40,6 @@ public abstract class BlurUtils {
         return blurOnMoreSurfaces() && isBlurExpansionEnabledOnDevice();
     }
 
-    /**
-     * Whether the standalone power menu should use window blur.
-     *
-     * <p>The power menu runs its own in-window animation which does not animate
-     * {@code blurBehindRadius}; enabling blur there makes it pop in/out and breaks the
-     * transition. Devices/ROMs can opt out while keeping the volume dialog blur.
-     */
-    public static boolean isPowerMenuBlurEnabled() {
-        return isVolumeAndPowerBlurEnabled()
-                && Resources.getSystem().getBoolean(
-                        com.android.internal.R.bool.config_powerMenuBlurEnabled);
-    }
-
     private static boolean isBlurExpansionEnabledOnDevice() {
         return Resources.getSystem().getBoolean(
                 com.android.internal.R.bool.config_enableBlurExpansion);

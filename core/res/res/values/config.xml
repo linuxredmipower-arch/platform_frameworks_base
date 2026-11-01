@@ -8033,12 +8033,6 @@
      <!-- Whether to enable blur expansion (surface blurs) -->
     <bool name="config_enableBlurExpansion">true</bool>
 
-    <!-- Whether the standalone power menu (global actions dialog) uses window blur.
-         The in-window dialog animation does not animate blurBehindRadius, so enabling
-         this makes the blur pop in/out. Keep disabled to match PixelOS behavior and
-         let the normal window animation run; the volume dialog blur is unaffected. -->
-    <bool name="config_powerMenuBlurEnabled">false</bool>
-
     <!-- Whether the native_serial service is supported by this device. -->
     <bool name="config_supportNativeSerialService">false</bool>
 
