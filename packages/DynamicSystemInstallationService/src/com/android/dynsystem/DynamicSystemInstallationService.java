@@ -313,6 +313,7 @@ public class DynamicSystemInstallationService extends Service
         String url = intent.getDataString();
         long systemSize = intent.getLongExtra(DynamicSystemClient.KEY_SYSTEM_SIZE, 0);
         long userdataSize = intent.getLongExtra(DynamicSystemClient.KEY_USERDATA_SIZE, 0);
+        boolean systemImage = intent.getBooleanExtra(DynamicSystemClient.KEY_SYSTEM_IMAGE, false);
         mEnableWhenCompleted = intent.getBooleanExtra(KEY_ENABLE_WHEN_COMPLETED, false);
         mOneShot = intent.getBooleanExtra(KEY_ONE_SHOT, true);
         String dsuSlot = intent.getStringExtra(KEY_DSU_SLOT);
@@ -328,7 +329,15 @@ public class DynamicSystemInstallationService extends Service
         // TODO: better constructor or builder
         mInstallTask =
                 new InstallationAsyncTask(
-                        url, dsuSlot, publicKey, systemSize, userdataSize, this, mDynSystem, this);
+                        url,
+                        dsuSlot,
+                        publicKey,
+                        systemSize,
+                        userdataSize,
+                        systemImage,
+                        this,
+                        mDynSystem,
+                        this);
 
         mInstallTask.execute();
 

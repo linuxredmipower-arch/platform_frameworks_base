@@ -226,6 +226,12 @@ public class DynamicSystemClient {
     public static final String KEY_SYSTEM_SIZE = "KEY_SYSTEM_SIZE";
 
     /**
+     * Intent key: the Uri is a system image (.img), sparse or raw, not a gzip or zip payload.
+     * @hide
+     */
+    public static final String KEY_SYSTEM_IMAGE = "KEY_SYSTEM_IMAGE";
+
+    /**
      * Intent key: Number of bytes to reserve for userdata.
      * @hide
      */
