@@ -473,6 +473,16 @@ public class DozeSensors {
                 state == Display.STATE_DOZE
                 || state == Display.STATE_DOZE_SUSPEND
                 || state == Display.STATE_OFF);
+
+        if (state == Display.STATE_ON) {
+            /*
+             * marble: the display can become fully ON without DozeMachine going
+             * through its usual FINISH transition (custom wake-to-launcher path).
+             * Release the touch gesture sensors explicitly so the touch IC leaves
+             * gesture mode and normal touch input is restored.
+             */
+            setListeningWithPowerState(false, false, false, false);
+        }
     }
 
     public void setProxListening(boolean listen) {
