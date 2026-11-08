@@ -16,7 +16,7 @@
 
 package com.android.systemui.globalactions;
 
-import static com.android.systemui.shared.system.BlurUtils.isVolumeAndPowerBlurEnabled;
+import static com.android.systemui.shared.system.BlurUtils.isPowerMenuBlurEnabled;
 
 import android.content.Context;
 import android.graphics.drawable.Drawable;
@@ -82,7 +82,7 @@ public abstract class GlobalActionsLayout extends MultiListLayout {
     }
 
     private void updateIsBlurSupported() {
-        if (isVolumeAndPowerBlurEnabled() && mBackgroundsSet && mIsBlurSupported != null) {
+        if (isPowerMenuBlurEnabled() && mBackgroundsSet && mIsBlurSupported != null) {
             updateBackground(mContext.getColor(
                     mIsBlurSupported && mTranslucentPowerMenu
                             ? R.color.global_actions_grid_background_blur
