@@ -336,15 +336,22 @@ public class DozeTriggers implements DozeMachine.Part {
                     mDozeLog.traceSensorEventDropped(pulseReason, "prox reporting near");
                     return;
                 }
-                if (isDoubleTap || isTap) {
+                if (isDoubleTap) {
                     mDozeHost.onSlpiTap(screenX, screenY);
                     gentleWakeUp(pulseReason);
+                } else if (isTap) {
+                    // marble: "tap screen to wake" means ambient display, not a full wake
+                    mDozeHost.onSlpiTap(screenX, screenY);
+                    requestPulse(pulseReason, true /* alreadyPerformedProxCheck */,
+                            null /* onPulseSuppressedListener */);
                 } else if (isPickup) {
                     if (shouldDropPickupEvent())  {
                         mDozeLog.traceSensorEventDropped(pulseReason, "keyguard occluded");
                         return;
                     }
-                    gentleWakeUp(pulseReason);
+                    // marble: "lift to check phone" means ambient display
+                    requestPulse(pulseReason, true /* alreadyPerformedProxCheck */,
+                            null /* onPulseSuppressedListener */);
                 } else if (isUdfpsLongPress) {
                     if (canPulse(mMachine.getState(), true)) {
                         mDozeLog.d("updfsLongPress - setting aodInterruptRunnable to run when "
