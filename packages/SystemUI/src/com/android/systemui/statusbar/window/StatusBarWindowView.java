@@ -21,8 +21,12 @@ import static android.view.WindowInsets.Type.systemBars;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.Insets;
+import android.os.PowerManager;
+import android.os.SystemClock;
+import android.provider.Settings;
 import android.util.AttributeSet;
 import android.view.DisplayCutout;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowInsets;
 import android.widget.FrameLayout;
@@ -46,11 +50,53 @@ public class StatusBarWindowView extends FrameLayout {
     private int mRightInset = 0;
     private int mTopInset = 0;
 
+    private static final long DOUBLE_TAP_TIMEOUT_MS = 300;
+    private static final float DOUBLE_TAP_SLOP_PX = 100f;
+
     @Nullable private StatusBarConfigurationController mConfigurationController;
+    private final PowerManager mPowerManager;
+    private long mLastTapTime;
+    private float mLastTapX;
+    private float mLastTapY;
 
     public StatusBarWindowView(Context context, AttributeSet attrs) {
         super(context, attrs);
         setClipChildren(false);
+        mPowerManager = context.getSystemService(PowerManager.class);
+    }
+
+    /**
+     * MikuUI double-tap-to-sleep. This view is inflated on a background thread, so a
+     * GestureDetector (which needs a Handler/Looper) cannot be used here. Track the taps
+     * manually instead. The status bar lives in its own window and the scene container no
+     * longer routes these taps to the legacy shade handler.
+     */
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            long now = SystemClock.uptimeMillis();
+            float dx = ev.getX() - mLastTapX;
+            float dy = ev.getY() - mLastTapY;
+            if (now - mLastTapTime <= DOUBLE_TAP_TIMEOUT_MS
+                    && dx * dx + dy * dy <= DOUBLE_TAP_SLOP_PX * DOUBLE_TAP_SLOP_PX
+                    && doubleTapToSleepEnabled()) {
+                mLastTapTime = 0;
+                mPowerManager.goToSleep(now);
+            } else {
+                mLastTapTime = now;
+                mLastTapX = ev.getX();
+                mLastTapY = ev.getY();
+            }
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
+    private boolean doubleTapToSleepEnabled() {
+        if (mPowerManager == null || !mPowerManager.isInteractive()) {
+            return false;
+        }
+        return Settings.Secure.getInt(getContext().getContentResolver(),
+                Settings.Secure.DOUBLE_TAP_SLEEP_GESTURE, 1) != 0;
     }
 
     @Override

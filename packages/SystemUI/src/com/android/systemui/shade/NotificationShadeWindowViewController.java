@@ -442,10 +442,9 @@ public class NotificationShadeWindowViewController implements Dumpable {
                 }
 
                 mFalsingCollector.onTouchEvent(ev);
-                // Keep feeding the pulsing/tap-to-sleep gesture handler even with the
-                // scene container enabled: MikuUI's double-tap-to-sleep lives here and
-                // the scene path does not handle the status bar double tap.
-                mPulsingWakeupGestureHandler.onTouchEvent(ev);
+                if (!SceneContainerFlag.isEnabled()) {
+                    mPulsingWakeupGestureHandler.onTouchEvent(ev);
+                }
 
                 if (!SceneContainerFlag.isEnabled()
                         // External touches are never intended to go the hub, only for opening the
