@@ -268,7 +268,10 @@ constructor(
         if (isDoubleTapHandlingEnabled.value) {
             Log.d(TAG, "going to sleep due to double tap")
             powerManager.goToSleep(systemClock.uptimeMillis())
-        } else {
+        } else if (!pulsingGestureListener.onDoubleTapSleep()) {
+            // MikuUI's double-tap-to-sleep (double_tap_sleep_gesture) is not the
+            // AOSP double_tap_to_sleep setting this interactor checks, so fall back
+            // to the shared listener; it only sleeps when not dozing.
             pulsingGestureListener.onDoubleTapEvent()
         }
     }

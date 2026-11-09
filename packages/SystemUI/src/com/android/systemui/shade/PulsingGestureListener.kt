@@ -20,6 +20,7 @@ import android.content.Context
 import android.graphics.Point
 import android.hardware.display.AmbientDisplayConfiguration
 import android.os.PowerManager
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -145,6 +146,19 @@ constructor(
         }
 
         return onDoubleTapEvent()
+    }
+
+    /**
+     * Handles a double tap reported by the scene container keyguard. Reuses MikuUI's
+     * double-tap-to-sleep setting and never sleeps while dozing (that is a wake tap).
+     * Returns true when the tap was consumed.
+     */
+    fun onDoubleTapSleep(): Boolean {
+        if (!statusBarStateController.isDozing && doubleTapToSleepEnabled) {
+            powerManager.goToSleep(SystemClock.uptimeMillis())
+            return true
+        }
+        return false
     }
 
     fun onDoubleTapEvent(): Boolean {
