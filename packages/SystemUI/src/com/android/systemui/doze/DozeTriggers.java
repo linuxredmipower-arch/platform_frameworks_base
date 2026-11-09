@@ -29,6 +29,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.hardware.display.AmbientDisplayConfiguration;
 import android.os.SystemClock;
+import android.os.UserHandle;
 import android.text.format.Formatter;
 import android.util.IndentingPrintWriter;
 import android.util.Log;
@@ -336,22 +337,15 @@ public class DozeTriggers implements DozeMachine.Part {
                     mDozeLog.traceSensorEventDropped(pulseReason, "prox reporting near");
                     return;
                 }
-                if (isDoubleTap) {
+                if (isDoubleTap || isTap) {
                     mDozeHost.onSlpiTap(screenX, screenY);
                     gentleWakeUp(pulseReason);
-                } else if (isTap) {
-                    // marble: "tap screen to wake" means ambient display, not a full wake
-                    mDozeHost.onSlpiTap(screenX, screenY);
-                    requestPulse(pulseReason, true /* alreadyPerformedProxCheck */,
-                            null /* onPulseSuppressedListener */);
                 } else if (isPickup) {
                     if (shouldDropPickupEvent())  {
                         mDozeLog.traceSensorEventDropped(pulseReason, "keyguard occluded");
                         return;
                     }
-                    // marble: "lift to check phone" means ambient display
-                    requestPulse(pulseReason, true /* alreadyPerformedProxCheck */,
-                            null /* onPulseSuppressedListener */);
+                    gentleWakeUp(pulseReason);
                 } else if (isUdfpsLongPress) {
                     if (canPulse(mMachine.getState(), true)) {
                         mDozeLog.d("updfsLongPress - setting aodInterruptRunnable to run when "
@@ -385,7 +379,22 @@ public class DozeTriggers implements DozeMachine.Part {
         return mKeyguardStateController.isOccluded();
     }
 
+    private boolean dozeInsteadOfWake(@DozeLog.Reason int reason) {
+        switch (reason) {
+            case DozeLog.REASON_SENSOR_PICKUP:
+                return mConfig.pickupGestureAmbient(UserHandle.USER_CURRENT);
+            case DozeLog.REASON_SENSOR_TAP:
+                return mConfig.tapGestureAmbient(UserHandle.USER_CURRENT);
+        }
+        return false;
+    }
+
     private void gentleWakeUp(@DozeLog.Reason int reason) {
+        if (dozeInsteadOfWake(reason)) {
+            requestPulse(reason, true /* alreadyPerformedProxCheck */,
+                    null /* onPulseSuppressedListener */);
+            return;
+        }
         // Log screen wake up reason (lift/pickup, tap, double-tap)
         Optional.ofNullable(DozingUpdateUiEvent.fromReason(reason))
                 .ifPresent(uiEventEnum -> mUiEventLogger.log(uiEventEnum, getKeyguardSessionId()));

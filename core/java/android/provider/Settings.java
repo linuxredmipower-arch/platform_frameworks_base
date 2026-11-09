@@ -10929,6 +10929,12 @@ public final class Settings {
         public static final String DOZE_PICK_UP_GESTURE = "doze_pulse_on_pick_up";
 
         /**
+         * Whether picking up the device shows the ambient display instead of fully waking up.
+         * @hide
+         */
+        public static final String DOZE_PICK_UP_GESTURE_AMBIENT = "doze_pick_up_gesture_ambient";
+
+        /**
          * Whether the device should pulse on long press gesture.
          * @hide
          */
@@ -10948,6 +10954,12 @@ public final class Settings {
          */
         @Readable
         public static final String DOZE_TAP_SCREEN_GESTURE = "doze_tap_gesture";
+
+        /**
+         * Whether tapping the screen shows the ambient display instead of fully waking up.
+         * @hide
+         */
+        public static final String DOZE_TAP_GESTURE_AMBIENT = "doze_tap_gesture_ambient";
 
         /**
          * Gesture that wakes up the display, showing some version of the lock screen.
