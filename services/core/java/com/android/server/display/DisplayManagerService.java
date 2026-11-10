@@ -6187,6 +6187,14 @@ public final class DisplayManagerService extends SystemService {
         @Override // Binder call
         public void setTemporaryAutoBrightnessAdjustment(float adjustment) {
             setTemporaryAutoBrightnessAdjustment_enforcePermission();
+            // Some apps (e.g. MiuiCamera) reset the adjustment to 0.0f instead of
+            // Float.NaN, which makes the framework believe a temporary adjustment is
+            // still applied and disables the auto-brightness animation from then on.
+            // Treat 0.0f as "no adjustment".
+            if (adjustment == 0.0f) {
+                Slog.w(TAG, "Invalid auto brightness adjustment 0.0f, use Float.NaN instead!");
+                adjustment = Float.NaN;
+            }
             final long token = Binder.clearCallingIdentity();
             try {
                 synchronized (mSyncRoot) {
