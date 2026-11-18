@@ -110,6 +110,7 @@ public class VerificationActivity extends Activity {
         Intent intent = new Intent(this, DynamicSystemInstallationService.class);
         if (url != null) {
             intent.setData(url);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         }
         intent.setAction(DynamicSystemClient.ACTION_START_INSTALL);
         intent.putExtras(callingIntent);

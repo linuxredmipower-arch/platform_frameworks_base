@@ -184,6 +184,7 @@ class InstallationAsyncTask extends AsyncTask<String, Long, Throwable> {
     private final boolean mIsNetworkUrl;
     private final boolean mIsDeviceBootloaderUnlocked;
     private final boolean mWantScratchPartition;
+    private boolean mIsSystemImage;
     private int mCreatePartitionStatus;
     private DynamicSystemManager.Session mInstallationSession;
     private KeyRevocationList mKeyRevocationList;
@@ -212,6 +213,7 @@ class InstallationAsyncTask extends AsyncTask<String, Long, Throwable> {
             String publicKey,
             long systemSize,
             long userdataSize,
+            boolean systemImage,
             Context context,
             DynamicSystemManager dynSystem,
             ProgressListener listener) {
@@ -225,6 +227,7 @@ class InstallationAsyncTask extends AsyncTask<String, Long, Throwable> {
         mPublicKey = publicKey;
         mSystemSize = systemSize;
         mUserdataSize = userdataSize;
+        mIsSystemImage = systemImage;
         mContext = context;
         mDynSystem = dynSystem;
         mListener = listener;
@@ -385,8 +388,16 @@ class InstallationAsyncTask extends AsyncTask<String, Long, Throwable> {
             return;
         }
         String extension = mUrl.substring(mUrl.lastIndexOf('.') + 1);
+        int query = extension.indexOf('?');
+        if (query >= 0) {
+            extension = extension.substring(0, query);
+        }
 
-        if ("gz".equals(extension) || "gzip".equals(extension)) {
+        if (mIsSystemImage || "img".equalsIgnoreCase(extension)) {
+            // Sparse or raw system.img. Content Uris often have no .img suffix.
+            mIsSystemImage = true;
+            mIsZip = false;
+        } else if ("gz".equals(extension) || "gzip".equals(extension)) {
             mIsZip = false;
         } else if ("zip".equals(extension)) {
             mIsZip = true;
@@ -408,6 +419,9 @@ class InstallationAsyncTask extends AsyncTask<String, Long, Throwable> {
         } else {
             throw new UnsupportedUrlException(
                     String.format(Locale.US, "Unsupported URL: %s", mUrl));
+        }
+        if (mIsSystemImage && mStream == null) {
+            throw new IOException("Failed to open system image: " + mUrl);
         }
 
         boolean hasTotalPartitionNumber = false;
@@ -538,6 +552,9 @@ class InstallationAsyncTask extends AsyncTask<String, Long, Throwable> {
         if (mStream != null) {
             if (mIsZip) {
                 installStreamingZipUpdate();
+            } else if (mIsSystemImage) {
+                Log.d(TAG, "To install a system image");
+                installImage("system", mSystemSize, mStream);
             } else {
                 installStreamingGzUpdate();
             }

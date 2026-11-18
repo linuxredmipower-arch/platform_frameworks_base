@@ -31,6 +31,7 @@
 #include <sys/types.h>
 #include <math.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <utils/misc.h>
 #include <utils/Trace.h>
 #include <signal.h>
@@ -48,7 +49,9 @@
 #include <utils/Log.h>
 #include <utils/SystemClock.h>
 
+#include <android-base/file.h>
 #include <android-base/properties.h>
+#include <android-base/strings.h>
 
 #include <ui/DisplayMode.h>
 #include <ui/PixelFormat.h>
@@ -97,6 +100,8 @@ static constexpr const char* OEM_USERSPACE_REBOOT_ANIMATION_FILE = "/oem/media/u
 static constexpr const char* SYSTEM_USERSPACE_REBOOT_ANIMATION_FILE = "/system/media/userspace-reboot.zip";
 
 static const char BOOTANIM_DATA_DIR_PATH[] = "/data/misc/bootanim";
+static const char MIKU_CUSTOM_DIR[] = "/data/misc/bootanim/custom/";
+static const char MIKU_CUSTOM_SELECTED[] = "/data/misc/bootanim/custom/selected";
 static const char BOOTANIM_TIME_DIR_NAME[] = "time";
 static const char BOOTANIM_TIME_DIR_PATH[] = "/data/misc/bootanim/time";
 static const char CLOCK_FONT_ASSET[] = "images/clock_font.png";
@@ -694,8 +699,35 @@ bool BootAnimation::findBootAnimationFileInternal(const std::vector<std::string>
     return false;
 }
 
+// Non-default packs are read only from /data/misc/bootanim/custom and skip the theme pair.
+static bool mikuReadCustomBootFile(std::string* out) {
+    std::string name;
+    if (!android::base::ReadFileToString(MIKU_CUSTOM_SELECTED, &name)) {
+        return false;
+    }
+    name = android::base::Trim(name);
+    if (name.empty() || name == "default" || name.find('/') != std::string::npos ||
+            name.find('\\') != std::string::npos || name[0] == '.') {
+        return false;
+    }
+    if (name.size() < 5 || name.compare(name.size() - 4, 4, ".mba") != 0) {
+        return false;
+    }
+    *out = std::string(MIKU_CUSTOM_DIR) + name;
+    return true;
+}
+
 void BootAnimation::findBootAnimationFile() {
     ATRACE_CALL();
+    const bool userspaceReboot =
+            android::base::GetBoolProperty("sys.init.userspace_reboot.in_progress", false);
+    if (!userspaceReboot && !mShuttingDown) {
+        std::string custom;
+        if (mikuReadCustomBootFile(&custom) && hasMbaManifest(custom.c_str())) {
+            mZipFileName = custom.c_str();
+            return;
+        }
+    }
     // Pixel ABL sets ro.boot.theme=1; UiModeManager stores applied night as persist.sys.theme=2.
     const bool playDarkAnim =
             android::base::GetIntProperty("ro.boot.theme", 0) == 1 ||
@@ -727,7 +759,7 @@ void BootAnimation::findBootAnimationFile() {
         SYSTEM_USERSPACE_REBOOT_ANIMATION_FILE,
     };
 
-    if (android::base::GetBoolProperty("sys.init.userspace_reboot.in_progress", false)) {
+    if (userspaceReboot) {
         findBootAnimationFileInternal(userspaceRebootFiles);
     } else if (mShuttingDown) {
         findBootAnimationFileInternal(shutdownFiles);
